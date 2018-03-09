@@ -62,13 +62,13 @@ minecraft {
 	replace "@VERSION@", project.version
 }
 
-/*processResources {
+processResources {
 	exclude '**/*.db'
 	exclude '**/*.DS_Store'
 
 	// move our access transformer
 	rename '(.+_at.cfg)', 'META-INF/$1'
-}*/
+}
 
 build {
 	doLast {
@@ -78,9 +78,8 @@ build {
 	}
 }
 
-/*jar {
+jar {
 	manifest {
 		attributes 'FMLAT': 'realisticexplosions_at.cfg'
 	}
 }
-*/
