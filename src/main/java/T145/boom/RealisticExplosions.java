@@ -3,6 +3,7 @@ package T145.boom;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import T145.boom.config.ModConfig;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
@@ -15,6 +16,7 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.Explosion;
 import net.minecraft.world.World;
+import net.minecraftforge.common.IPlantable;
 import net.minecraftforge.event.world.ExplosionEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.Mod.EventHandler;
@@ -62,16 +64,18 @@ public class RealisticExplosions {
 
 	@SubscribeEvent
 	public static void onExplosionDetonate(ExplosionEvent.Detonate event) {
-		doExplosionB(event.getWorld(), event.getExplosion(), true);
+		doExplosionB(event.getWorld(), event.getExplosion());
 	}
 
-	private static void doExplosionB(World world, Explosion explosion, boolean spawnParticles) {
+	private static void doExplosionB(World world, Explosion explosion) {
 		world.playSound(null, explosion.x, explosion.y, explosion.z, SoundEvents.ENTITY_GENERIC_EXPLODE, SoundCategory.BLOCKS, 4.0F, (1.0F + (world.rand.nextFloat() - world.rand.nextFloat()) * 0.2F) * 0.7F);
 
-		if (explosion.size >= 2.0F && explosion.damagesTerrain) {
-			world.spawnParticle(EnumParticleTypes.EXPLOSION_HUGE, explosion.x, explosion.y, explosion.z, 1.0D, 0.0D, 0.0D);
-		} else {
-			world.spawnParticle(EnumParticleTypes.EXPLOSION_LARGE, explosion.x, explosion.y, explosion.z, 1.0D, 0.0D, 0.0D);
+		if (ModConfig.general.spawnParticles) {
+			if (explosion.size >= 2.0F && explosion.damagesTerrain) {
+				world.spawnParticle(EnumParticleTypes.EXPLOSION_HUGE, explosion.x, explosion.y, explosion.z, 1.0D, 0.0D, 0.0D);
+			} else {
+				world.spawnParticle(EnumParticleTypes.EXPLOSION_LARGE, explosion.x, explosion.y, explosion.z, 1.0D, 0.0D, 0.0D);
+			}
 		}
 
 		if (explosion.damagesTerrain) {
@@ -79,19 +83,19 @@ public class RealisticExplosions {
 				IBlockState state = world.getBlockState(blockpos);
 				Block block = state.getBlock();
 
-				if (spawnParticles) {
-					double d0 = (double) ((float) blockpos.getX() + world.rand.nextFloat());
-					double d1 = (double) ((float) blockpos.getY() + world.rand.nextFloat());
-					double d2 = (double) ((float) blockpos.getZ() + world.rand.nextFloat());
+				if (ModConfig.general.spawnParticles) {
+					double d0 = blockpos.getX() + world.rand.nextFloat();
+					double d1 = blockpos.getY() + world.rand.nextFloat();
+					double d2 = blockpos.getZ() + world.rand.nextFloat();
 					double d3 = d0 - explosion.x;
 					double d4 = d1 - explosion.y;
 					double d5 = d2 - explosion.z;
-					double d6 = (double) MathHelper.sqrt(d3 * d3 + d4 * d4 + d5 * d5);
+					double d6 = MathHelper.sqrt(d3 * d3 + d4 * d4 + d5 * d5);
 					d3 = d3 / d6;
 					d4 = d4 / d6;
 					d5 = d5 / d6;
-					double d7 = 0.5D / (d6 / (double) explosion.size + 0.1D);
-					d7 = d7 * (double) (world.rand.nextFloat() * world.rand.nextFloat() + 0.3F);
+					double d7 = 0.5D / (d6 / explosion.size + 0.1D);
+					d7 = d7 * (world.rand.nextFloat() * world.rand.nextFloat() + 0.3F);
 					d3 = d3 * d7;
 					d4 = d4 * d7;
 					d5 = d5 * d7;
@@ -99,13 +103,10 @@ public class RealisticExplosions {
 					world.spawnParticle(EnumParticleTypes.SMOKE_NORMAL, d0, d1, d2, d3, d4, d5);
 				}
 
-				if (state.getMaterial() != Material.AIR) {
+				if (state.getMaterial() != Material.AIR && !(state.getBlock() instanceof IPlantable)) {
 					if (block.canDropFromExplosion(explosion)) {
-						//EntityFallingBlockOverride e = new EntityFallingBlockOverride(world, explosion.x, explosion.y, explosion.z, state);
-						//e.fallTime = 65346;
-						//e.setFallTile(state);
-						EntityFallingBlock e = new EntityFallingBlock(world, explosion.x, explosion.y, explosion.z, state);
-						//e.fallTime = 99;
+						// TODO: Handle tile entities and such
+						EntityFallingBlock e = new EntityFallingBlock(world, explosion.x, explosion.y, explosion.z, getProperState(state));
 						e.fallTime = 14;
 
 						boolean b = world.rand.nextBoolean();
@@ -127,11 +128,18 @@ public class RealisticExplosions {
 		}
 
 		if (explosion.causesFire) {
-			for (BlockPos blockpos1 : explosion.affectedBlockPositions) {
-				if (world.getBlockState(blockpos1).getMaterial() == Material.AIR && world.getBlockState(blockpos1.down()).isFullBlock() && explosion.random.nextInt(3) == 0) {
-					world.setBlockState(blockpos1, Blocks.FIRE.getDefaultState());
+			for (BlockPos pos : explosion.affectedBlockPositions) {
+				if (world.getBlockState(pos).getMaterial() == Material.AIR && world.getBlockState(pos.down()).isFullBlock() && explosion.random.nextInt(3) == 0) {
+					world.setBlockState(pos, Blocks.FIRE.getDefaultState());
 				}
 			}
 		}
+	}
+
+	private static IBlockState getProperState(IBlockState state) {
+		if (state.getBlock() == Blocks.GRASS || state.getBlock() == Blocks.GRASS_PATH) {
+			return Blocks.DIRT.getDefaultState();
+		}
+		return state;
 	}
 }
