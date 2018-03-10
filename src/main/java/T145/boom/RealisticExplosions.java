@@ -4,10 +4,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import T145.boom.config.ModConfig;
+import T145.boom.entities.EntityShrapnel;
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
 import net.minecraft.block.state.IBlockState;
-import net.minecraft.entity.item.EntityFallingBlock;
 import net.minecraft.init.Blocks;
 import net.minecraft.init.SoundEvents;
 import net.minecraft.util.EnumParticleTypes;
@@ -64,10 +64,9 @@ public class RealisticExplosions {
 
 	@SubscribeEvent
 	public static void onExplosionDetonate(ExplosionEvent.Detonate event) {
-		doExplosionB(event.getWorld(), event.getExplosion());
-	}
+		World world = event.getWorld();
+		Explosion explosion = event.getExplosion();
 
-	private static void doExplosionB(World world, Explosion explosion) {
 		world.playSound(null, explosion.x, explosion.y, explosion.z, SoundEvents.ENTITY_GENERIC_EXPLODE, SoundCategory.BLOCKS, 4.0F, (1.0F + (world.rand.nextFloat() - world.rand.nextFloat()) * 0.2F) * 0.7F);
 
 		if (ModConfig.general.spawnParticles) {
@@ -79,14 +78,14 @@ public class RealisticExplosions {
 		}
 
 		if (explosion.damagesTerrain) {
-			for (BlockPos blockpos : explosion.affectedBlockPositions) {
-				IBlockState state = world.getBlockState(blockpos);
+			for (BlockPos pos : explosion.affectedBlockPositions) {
+				IBlockState state = world.getBlockState(pos);
 				Block block = state.getBlock();
 
 				if (ModConfig.general.spawnParticles) {
-					double d0 = blockpos.getX() + world.rand.nextFloat();
-					double d1 = blockpos.getY() + world.rand.nextFloat();
-					double d2 = blockpos.getZ() + world.rand.nextFloat();
+					double d0 = pos.getX() + world.rand.nextFloat();
+					double d1 = pos.getY() + world.rand.nextFloat();
+					double d2 = pos.getZ() + world.rand.nextFloat();
 					double d3 = d0 - explosion.x;
 					double d4 = d1 - explosion.y;
 					double d5 = d2 - explosion.z;
@@ -103,10 +102,10 @@ public class RealisticExplosions {
 					world.spawnParticle(EnumParticleTypes.SMOKE_NORMAL, d0, d1, d2, d3, d4, d5);
 				}
 
-				if (state.getMaterial() != Material.AIR && !(state.getBlock() instanceof IPlantable)) {
-					if (block.canDropFromExplosion(explosion)) {
+				if (state.getMaterial() != Material.AIR) {
+					if (!(state.getBlock() instanceof IPlantable) && state.getMaterial() != Material.LEAVES && block.canDropFromExplosion(explosion)) {
 						// TODO: Handle tile entities and such
-						EntityFallingBlock e = new EntityFallingBlock(world, explosion.x, explosion.y, explosion.z, getProperState(state));
+						EntityShrapnel e = new EntityShrapnel(world, explosion, getProperState(state));
 						e.fallTime = 14;
 
 						boolean b = world.rand.nextBoolean();
@@ -122,7 +121,7 @@ public class RealisticExplosions {
 						world.spawnEntity(e);
 					}
 
-					block.onBlockExploded(world, blockpos, explosion);
+					block.onBlockExploded(world, pos, explosion);
 				}
 			}
 		}

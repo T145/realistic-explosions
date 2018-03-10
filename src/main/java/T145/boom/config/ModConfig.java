@@ -11,12 +11,12 @@ public class ModConfig {
 
 	@Config.LangKey(RealisticExplosions.MODID + ".config.general")
 	public static final General general = new General();
-	
+
 	public static class General {
-		
+
 		@Config.Comment("Sends you an in-game notification if an update is available")
 		public boolean checkForUpdates = true;
-		
+
 		@Config.Comment("Whether or not explosions spawn particles as usual")
 		public boolean spawnParticles;
 	}
